@@ -8,6 +8,7 @@ import { Search } from "lucide-react";
 
 
 import ProductCard from "@/components/ProductCard";
+import PageHero from "@/components/PageHero";
 
 interface Product {
   _id: string;
@@ -74,7 +75,9 @@ function ProductsContent() {
   const allCategories = ["All", ...categories];
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pt-4 pb-8">
+    <>
+    <PageHero eyebrow={t("rich.pProducts")} title={t("nav.products")} sub={t("rich.productsSub")} />
+    <div className="mx-auto max-w-7xl px-4 pt-6 pb-8 md:px-6">
       {search && (
         <p className="mb-3 flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
           <Search className="size-4 flex-shrink-0" />
@@ -138,5 +141,6 @@ function ProductsContent() {
         </div>
       )}
     </div>
+    </>
   );
 }

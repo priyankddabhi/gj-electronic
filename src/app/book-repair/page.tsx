@@ -7,9 +7,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { normalizePhone } from "@/lib/phone";
-import { Wrench } from "lucide-react";
 import { DEVICE_TYPES } from "@/lib/constants";
 import { MY_REPAIRS_KEY, saveId } from "@/lib/myTracking";
+import PageHero from "@/components/PageHero";
 
 const repairSchema = z.object({
   customerName: z.string().trim().min(2, "errors.name"),
@@ -57,14 +57,9 @@ export default function BookRepairPage() {
   };
 
   return (
+    <>
+    <PageHero eyebrow={t("rich.pRepair")} title={t("repair.title")} />
     <div className="mx-auto max-w-xl px-4 py-8">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Wrench className="size-5" />
-        </div>
-        <h1 className="text-2xl font-bold">{t("repair.title")}</h1>
-      </div>
-
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <div>
           <label className="mb-1.5 block text-sm font-medium">
@@ -155,5 +150,6 @@ export default function BookRepairPage() {
         </button>
       </form>
     </div>
+    </>
   );
 }

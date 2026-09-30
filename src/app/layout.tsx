@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Noto_Sans_Gujarati, Noto_Sans_Devanagari } from "next/font/google";
 import "./globals.css";
+import "./rich.css";
 import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";

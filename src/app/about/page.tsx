@@ -12,21 +12,21 @@ import {
   Zap,
 } from "lucide-react";
 import {
-  SHOP_NAME,
   SHOP_PHONE,
   SHOP_WHATSAPP,
   SHOP_ADDRESS,
   SHOP_HOURS,
   GOOGLE_REVIEW_URL,
 } from "@/lib/constants";
+import PageHero from "@/components/PageHero";
 
 export default function AboutPage() {
   const { t } = useTranslation();
 
   return (
+    <>
+    <PageHero eyebrow={t("rich.pAbout")} title={t("about.title")} sub={t("about.description")} />
     <div className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="mb-4 text-2xl font-bold">{t("about.title")}</h1>
-      <p className="mb-8 text-muted-foreground">{t("about.description")}</p>
 
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-border p-5 text-center">
@@ -100,5 +100,6 @@ export default function AboutPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

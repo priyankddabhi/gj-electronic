@@ -8,6 +8,7 @@ import { Search, CheckCircle2, Circle, Clock, LogIn, CheckCircle, Home, Lock } f
 import { ORDER_STATUSES, SHOP_WHATSAPP } from "@/lib/constants";
 import { useCustomerStore } from "@/store/customer";
 import { MY_ORDERS_KEY, getSavedIds } from "@/lib/myTracking";
+import PageHero from "@/components/PageHero";
 
 interface Order {
   orderId: string;
@@ -77,6 +78,8 @@ function TrackOrderContent() {
     ORDER_STATUSES.indexOf(status as (typeof ORDER_STATUSES)[number]);
 
   return (
+    <>
+    <PageHero eyebrow={t("rich.pTrack")} title={t("track.orderTitle")} />
     <div className="mx-auto max-w-2xl px-4 py-8">
       {isNew && (
         <div className="mb-6 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/30">
@@ -87,8 +90,6 @@ function TrackOrderContent() {
           </div>
         </div>
       )}
-
-      <h1 className="mb-4 text-2xl font-bold">{t("track.orderTitle")}</h1>
 
       {customer ? (
         <p className="mb-4 text-sm text-muted-foreground">
@@ -234,5 +235,6 @@ function TrackOrderContent() {
         })}
       </div>
     </div>
+    </>
   );
 }

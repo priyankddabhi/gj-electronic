@@ -12,6 +12,7 @@ import { ArrowLeft } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 import { useCustomerStore } from "@/store/customer";
 import { MY_ORDERS_KEY, saveId } from "@/lib/myTracking";
+import PageHero from "@/components/PageHero";
 
 const checkoutSchema = z.object({
   customerName: z.string().trim().min(2, "errors.name"),
@@ -115,6 +116,8 @@ export default function CheckoutPage() {
   }
 
   return (
+    <>
+    <PageHero eyebrow={t("rich.pCheckout")} title={t("checkout.title")} />
     <div className="mx-auto max-w-2xl px-4 py-8">
       <Link
         href="/cart"
@@ -123,8 +126,6 @@ export default function CheckoutPage() {
         <ArrowLeft className="size-4" />
         {t("common.back")}
       </Link>
-
-      <h1 className="mb-6 text-2xl font-bold">{t("checkout.title")}</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div>
@@ -243,5 +244,6 @@ export default function CheckoutPage() {
         </button>
       </form>
     </div>
+    </>
   );
 }

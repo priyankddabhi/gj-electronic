@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useTranslation } from "react-i18next";
 import { Minus, Plus, Trash2, ShoppingCart, ArrowRight } from "lucide-react";
 import { useCartStore } from "@/store/cart";
+import PageHero from "@/components/PageHero";
 
 export default function CartPage() {
   const { t } = useTranslation();
@@ -27,9 +28,9 @@ export default function CartPage() {
   }
 
   return (
+    <>
+    <PageHero eyebrow={t("rich.pCart")} title={t("cart.title")} />
     <div className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-bold">{t("cart.title")}</h1>
-
       <div className="space-y-3">
         {items.map((item) => (
           <div
@@ -115,5 +116,6 @@ export default function CartPage() {
         </Link>
       </div>
     </div>
+    </>
   );
 }

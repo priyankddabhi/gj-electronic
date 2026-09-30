@@ -8,6 +8,7 @@ import { useCustomerStore, type CustomerInfo } from "@/store/customer";
 import { MY_ORDERS_KEY, MY_REPAIRS_KEY, getSavedIds } from "@/lib/myTracking";
 import { SHOP_PHONE, SHOP_WHATSAPP } from "@/lib/constants";
 import { MIN_PASSWORD, normalizePhone } from "@/lib/phone";
+import PageHero from "@/components/PageHero";
 
 const LANGUAGES = [
   { code: "en", label: "English", sample: "Aa" },
@@ -278,9 +279,9 @@ export default function SettingsPage() {
   };
 
   return (
+    <>
+    <PageHero eyebrow={t("rich.pSettings")} title={t("settings.title")} />
     <div className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-      <h1 className="text-2xl font-bold">{t("settings.title")}</h1>
-
       {loading ? null : customer ? (
         <section className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center gap-3">
@@ -389,5 +390,6 @@ export default function SettingsPage() {
         </button>
       )}
     </div>
+    </>
   );
 }

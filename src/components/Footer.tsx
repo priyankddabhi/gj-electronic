@@ -9,50 +9,50 @@ export default function Footer() {
   const { t } = useTranslation();
 
   return (
-    <footer className="mt-auto border-t-[3px] border-crimson bg-navy text-sm text-on-dark-muted">
-      <div className="mx-auto grid max-w-7xl gap-7 px-4 py-9 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
+    <footer className="site-footer mt-auto">
+      <div className="wrap cols">
         <div>
-          <Link href="/" className="flex items-center gap-2.5 text-white">
-            <span className="flex size-9 items-center justify-center rounded-[10px] bg-crimson">
-              <Wrench className="size-[18px]" />
-            </span>
-            <span className="text-lg font-bold tracking-tight">{SHOP_NAME}</span>
+          <Link href="/" className="logo" style={{ color: "#fff" }}>
+            <i><Wrench size={18} /></i>
+            <span><b>{SHOP_NAME}</b></span>
           </Link>
-          <p className="mt-3 max-w-[32ch]">{t("footer.tagline")}</p>
+          <p style={{ marginTop: 12, maxWidth: "32ch" }}>{t("footer.tagline")}</p>
         </div>
 
         <div>
-          <h3 className="mb-2.5 font-semibold text-white">{t("nav.products")}</h3>
-          <ul className="space-y-1.5">
+          <h4>{t("nav.products")}</h4>
+          <ul>
             {["Fans", "Lights", "Switches", "Wires"].map((cat) => (
               <li key={cat}>
-                <Link href={`/products?category=${cat}`} className="hover:text-white">{t(`categories.${cat}`)}</Link>
+                <Link href={`/products?category=${cat}`}>{t(`categories.${cat}`)}</Link>
               </li>
             ))}
           </ul>
         </div>
 
         <div>
-          <h3 className="mb-2.5 font-semibold text-white">{t("footer.services")}</h3>
-          <ul className="space-y-1.5">
-            <li><Link href="/book-repair" className="hover:text-white">{t("nav.bookRepair")}</Link></li>
-            <li><Link href="/track-repair" className="hover:text-white">{t("nav.trackRepair")}</Link></li>
-            <li><Link href="/track-order" className="hover:text-white">{t("nav.trackOrder")}</Link></li>
-            <li><Link href="/about" className="hover:text-white">{t("nav.about")}</Link></li>
+          <h4>{t("footer.services")}</h4>
+          <ul>
+            <li><Link href="/book-repair">{t("nav.bookRepair")}</Link></li>
+            <li><Link href="/track-repair">{t("nav.trackRepair")}</Link></li>
+            <li><Link href="/track-order">{t("nav.trackOrder")}</Link></li>
+            <li><Link href="/about">{t("nav.about")}</Link></li>
           </ul>
         </div>
 
         <div>
-          <h3 className="mb-2.5 font-semibold text-white">{t("footer.contact")}</h3>
-          <ul className="space-y-1.5">
-            <li><a href={`tel:${SHOP_PHONE.replace(/\s/g, "")}`} className="hover:text-white">{SHOP_PHONE}</a></li>
+          <h4>{t("footer.contact")}</h4>
+          <ul>
+            <li><a href={`tel:${SHOP_PHONE.replace(/\s/g, "")}`}>{SHOP_PHONE}</a></li>
             <li>{SHOP_HOURS}</li>
           </ul>
         </div>
       </div>
 
-      <div className="border-t border-white/10">
-        <p className="mx-auto max-w-7xl px-4 py-3.5 text-xs">
+      <div className="wordmark" aria-hidden>GJ ELECTRONIC</div>
+
+      <div className="copyright">
+        <p className="wrap">
           &copy; {new Date().getFullYear()} {SHOP_NAME}. {t("footer.rights")}
         </p>
       </div>

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { preload } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   Wrench,
   ShieldCheck,
@@ -16,6 +17,7 @@ import {
   Phone,
   MessageCircle,
   ChevronRight,
+  ChevronLeft,
   Fan,
   Lightbulb,
   LampCeiling,
@@ -35,7 +37,15 @@ import {
   GOOGLE_REVIEW_URL,
 } from "@/lib/constants";
 import ProductCard from "@/components/ProductCard";
-import PromoCarousel from "@/components/PromoCarousel";
+import MenuBar from "@/components/MenuBar";
+import {
+  loadMotion,
+  prefersReducedMotion,
+  setupCountUp,
+  setupPointerEffects,
+  setupReveals,
+  showAllReveals,
+} from "@/lib/richMotion";
 
 interface Product {
   _id: string;
@@ -64,19 +74,38 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   Heaters: Heater,
 };
 
-const QUICK_LINKS = [
-  { href: "/products", icon: Package, key: "quickShop" },
-  { href: "/book-repair", icon: Wrench, key: "quickRepair" },
-  { href: "/track-order", icon: Truck, key: "quickTrack" },
-];
-
 const REPAIR_DEVICES = ["fan", "mixer", "iron", "inverter"];
+const BRANDS = ["Havells", "Philips", "Wipro", "Bajaj", "Anchor", "Polycab", "Orient", "Luminous", "Crompton", "Syska"];
+const DELAY_MS = 3000;
+
+// The intro curtain plays once per page load, not every time the visitor comes back to Home
+let introPlayed = false;
+
+/* BlurText: each word sharpens in one after another */
+function Words({ text }: { text: string }) {
+  return (
+    <>
+      {text.trim().split(/\s+/).map((w, i) => (
+        <span key={i}>
+          <span className="w" style={{ "--i": i } as CSSProperties}>{w}</span>{" "}
+        </span>
+      ))}
+    </>
+  );
+}
+
+function Arrow() {
+  return <ChevronRight size={16} strokeWidth={2.5} />;
+}
 
 export default function HomePage() {
   const { t } = useTranslation();
   const [categories, setCategories] = useState<string[]>([]);
   const [popular, setPopular] = useState<Product[]>([]);
   const [maxDiscount, setMaxDiscount] = useState(0);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  preload("/hero/hero-1.jpg", { as: "image", fetchPriority: "high" });
 
   useEffect(() => {
     fetch("/api/categories")
@@ -99,248 +128,387 @@ export default function HomePage() {
       .catch(() => {});
   }, []);
 
+  /* ---------- Intro curtain: navy panel with the wordmark lifts, then the hero text animates in ---------- */
+  const [curtain, setCurtain] = useState(() => !introPlayed);
+  const curtainRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = document.documentElement;
+    introPlayed = true;
+    // No curtain (came back to Home) or reduced motion (CSS hides the curtain): show the hero text now
+    if (!curtain || prefersReducedMotion()) {
+      root.classList.add("ready");
+      return;
+    }
+    const a = setTimeout(() => curtainRef.current?.classList.add("lift"), 900);
+    const b = setTimeout(() => root.classList.add("ready"), 1050);
+    const c = setTimeout(() => setCurtain(false), 2000);
+    return () => { clearTimeout(a); clearTimeout(b); clearTimeout(c); root.classList.add("ready"); };
+  }, [curtain]);
+
+  /* ---------- Hero carousel ---------- */
+  const slides = [
+    { tag: t("home.heroTag"), title: t("home.hero"), text: t("rich.s1Text"), image: "/hero/hero-1.jpg", focus: "62% 50%",
+      ctas: [{ label: t("home.shopNow"), href: "/products", red: true }, { label: t("home.bookRepair"), href: "/book-repair", red: false }] },
+    { tag: t("promo.s2Tag"), title: maxDiscount > 0 ? t("promo.dealTitle", { percent: maxDiscount }) : t("promo.dealTitleNone"),
+      text: t("promo.s2Text"), image: "/hero/hero-2.jpg", focus: "72% 50%", ctas: [{ label: t("promo.s2Cta"), href: "/products", red: true }] },
+    { tag: t("promo.s3Tag"), title: t("promo.s3Title"), text: t("promo.s3Text"), image: "/hero/hero-3.jpg", focus: "70% 45%",
+      ctas: [{ label: t("promo.s3Cta"), href: "/book-repair", red: true }] },
+    { tag: t("promo.s4Tag"), title: t("promo.s4Title"), text: t("promo.s4Text"), image: "/hero/hero-4.jpg", focus: "76% 50%",
+      ctas: [{ label: t("promo.s4Cta"), href: "/about", red: true }] },
+  ];
+  const count = slides.length;
+  const [index, setIndex] = useState(0);
+  const [round, setRound] = useState(0); // restarts the progress bar animation
+  const [dragging, setDragging] = useState(false);
+  const startX = useRef<number | null>(null);
+  const heroRef = useRef<HTMLElement>(null);
+
+  const show = (i: number) => {
+    setIndex(((i % count) + count) % count);
+    setRound((r) => r + 1);
+  };
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!document.hidden) { setIndex((i) => (i + 1) % count); setRound((r) => r + 1); }
+    }, DELAY_MS);
+    return () => clearInterval(id);
+  }, [round, count]);
+
+  // swipe / drag, and the arrow keys (not while typing in a field)
+  useEffect(() => {
+    const up = (e: PointerEvent) => {
+      if (startX.current === null) return;
+      const dx = e.clientX - startX.current;
+      startX.current = null;
+      setDragging(false);
+      if (Math.abs(dx) > 50) {
+        setIndex((i) => (((i + (dx < 0 ? 1 : -1)) % count) + count) % count);
+        setRound((r) => r + 1);
+      }
+    };
+    const key = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement).closest?.("input,textarea,select,[contenteditable]")) return;
+      if (e.key === "ArrowRight") { setIndex((i) => (i + 1) % count); setRound((r) => r + 1); }
+      if (e.key === "ArrowLeft") { setIndex((i) => (i - 1 + count) % count); setRound((r) => r + 1); }
+    };
+    window.addEventListener("pointerup", up);
+    window.addEventListener("keydown", key);
+    return () => { window.removeEventListener("pointerup", up); window.removeEventListener("keydown", key); };
+  }, [count]);
+
+  /* ---------- Parallax: hero photo and banner photo drift slower than the page ---------- */
+  const bannerRef = useRef<HTMLElement>(null);
+  const bannerPhRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (prefersReducedMotion()) return;
+    let ticking = false;
+    const draw = () => {
+      ticking = false;
+      const y = window.scrollY, hero = heroRef.current, banner = bannerRef.current;
+      if (hero && y < hero.offsetHeight) hero.style.setProperty("--py", `${(y * 0.14).toFixed(1)}px`);
+      if (banner && bannerPhRef.current) {
+        const r = banner.getBoundingClientRect();
+        if (r.bottom > 0 && r.top < window.innerHeight) {
+          bannerPhRef.current.style.setProperty("--by", `${((r.top + r.height / 2 - window.innerHeight / 2) * -0.12).toFixed(1)}px`);
+        }
+      }
+    };
+    const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(draw); } };
+    draw();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  /* ---------- Spring reveals, magnetic buttons, tilt, spotlight (re-run when products/categories arrive) ---------- */
+  const cleanups = useRef<(() => void)[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    loadMotion().then((M) => {
+      const root = rootRef.current;
+      if (cancelled || !root) return;
+      if (M) setupReveals(root, M);
+      else showAllReveals(root);
+      cleanups.current.push(setupPointerEffects(root, M));
+    });
+    return () => { cancelled = true; };
+  }, [categories.length, popular.length]);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (root) cleanups.current.push(setupCountUp(root));
+    const list = cleanups.current;
+    return () => { list.forEach((c) => c()); list.length = 0; };
+  }, []);
+
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${SHOP_NAME} ${SHOP_ADDRESS}`)}`;
+  let n = 0;
+  const num = () => String(++n).padStart(2, "0");
 
   return (
-    <div className="bg-surface">
-      {/* Promotions: first thing on the page, visible without scrolling */}
-      <section className="mx-auto max-w-7xl px-4 py-5">
-        <PromoCarousel maxDiscount={maxDiscount} />
-      </section>
+    <div ref={rootRef}>
+      {curtain && <div ref={curtainRef} className="curtain" aria-hidden><b>{SHOP_NAME}</b></div>}
 
-      {/* Hero */}
-      <section className="border-b border-border bg-card py-8">
-        <div className="mx-auto grid max-w-7xl gap-6 px-4 md:grid-cols-[1.2fr_1fr]">
-          <div className="enter-up pb-2 pt-1 md:py-10 md:pr-12">
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-peach-line bg-accent px-2.5 py-1 text-[13px] font-semibold text-wine">
-              <MapPin className="size-3.5" />
-              {t("home.heroTag")}
-            </span>
-            <h1 className="mt-4 max-w-[16ch] text-[30px] font-bold leading-[1.15] tracking-tight md:text-[38px]">
-              {t("home.hero")}
-            </h1>
-            <p className="mt-3 max-w-[40ch] text-[17px] text-muted-foreground">{t("home.heroSub")}</p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link
-                href="/products"
-                className="inline-flex h-[46px] items-center gap-2 rounded-[10px] bg-crimson px-[22px] text-[15px] font-semibold text-white transition-colors hover:bg-wine active:scale-[0.97]"
-              >
-                {t("home.shopNow")}
-                <ChevronRight className="size-4" />
-              </Link>
-              <Link
-                href="/book-repair"
-                className="inline-flex h-[46px] items-center gap-2 rounded-[10px] border-[1.5px] border-foreground bg-card px-[22px] text-[15px] font-semibold text-foreground transition-colors hover:bg-foreground hover:text-background active:scale-[0.97]"
-              >
-                <Wrench className="size-4" />
-                {t("home.bookRepair")}
-              </Link>
-            </div>
-            <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5"><Clock className="size-4 text-crimson" />{SHOP_HOURS}</span>
-              <span className="flex items-center gap-1.5"><ShieldCheck className="size-4 text-crimson" />{t("home.heroWarranty")}</span>
-            </div>
-          </div>
+      {/* Full-screen hero carousel */}
+      <section
+        ref={heroRef}
+        className={`hero${dragging ? " dragging" : ""}`}
+        aria-roledescription="carousel"
+        aria-label={t("promo.label")}
+        style={{ "--delay": `${DELAY_MS / 1000}s` } as CSSProperties}
+        onPointerDown={(e) => {
+          if ((e.target as HTMLElement).closest("a,button")) return;
+          startX.current = e.clientX;
+          setDragging(true);
+        }}
+      >
+        {slides.map((s, i) => {
+          const Title = i === 0 ? "h1" : "h2";
+          return (
+            <article
+              key={i}
+              className={`slide${i === index ? " on" : ""}`}
+              style={{ "--focus": s.focus } as CSSProperties}
+              aria-roledescription="slide"
+              aria-label={t("promo.slideOf", { n: i + 1, total: count })}
+              aria-hidden={i !== index}
+              inert={i !== index}
+            >
+              <div className="ph" style={{ backgroundImage: `url(${s.image})` }} />
+              <div className="copy"><div className="wrap"><div className="inner">
+                <div className="tag rv">{s.tag}</div>
+                <Title className="rv bt"><Words text={s.title} /></Title>
+                <p className="rv">{s.text}</p>
+                <div className="cta rv">
+                  {s.ctas.map((c) => (
+                    <Link key={c.href} className={`btn ${c.red ? "btn-red" : "btn-ghost"}${i === 0 ? " mag" : ""}`} href={c.href} draggable={false}>
+                      {c.label}{c.red && <Arrow />}
+                    </Link>
+                  ))}
+                </div>
+              </div></div></div>
+            </article>
+          );
+        })}
 
-          <div className="enter-up enter-up-delay flex flex-col justify-center gap-2.5 rounded-[10px] bg-hero-panel p-7 text-white">
-            <h2 className="mb-1.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-peach">{t("home.quickLinks")}</h2>
-            {QUICK_LINKS.map(({ href, icon: Icon, key }) => (
-              <Link
-                key={href}
-                href={href}
-                className="group flex items-center gap-3.5 rounded-xl border border-white/[0.09] bg-white/[0.04] p-4 transition-colors hover:border-peach hover:bg-white/[0.09]"
+        <aside className="quick">
+          <h3>{t("home.quickLinks")}</h3>
+          {[
+            { href: "/products", icon: Package, key: "quickShop" },
+            { href: "/book-repair", icon: Wrench, key: "quickRepair" },
+            { href: "/track-order", icon: Truck, key: "quickTrack" },
+          ].map(({ href, icon: Icon, key }) => (
+            <Link key={href} href={href} draggable={false}>
+              <span className="ic"><Icon size={20} /></span>
+              <span><b>{t(`home.${key}Title`)}</b><small>{t(`home.${key}Desc`)}</small></span>
+            </Link>
+          ))}
+        </aside>
+
+        <div className="ctrl"><div className="wrap">
+          <div className="bars">
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                aria-label={t("promo.slideN", { n: i + 1 })}
+                aria-current={i === index}
+                className={i === index ? "on" : i < index ? "done" : undefined}
+                onClick={() => show(i)}
               >
-                <span className="grid size-[42px] flex-shrink-0 place-items-center rounded-[10px] bg-peach/[0.14] text-peach">
-                  <Icon className="size-5" />
-                </span>
-                <span className="flex-1">
-                  <span className="block font-semibold">{t(`home.${key}Title`)}</span>
-                  <span className="block text-[13px] text-on-dark-muted">{t(`home.${key}Desc`)}</span>
-                </span>
-                <ChevronRight className="size-4 text-peach transition-transform duration-200 group-hover:translate-x-1" />
-              </Link>
+                <i key={i === index ? `r${round}` : "idle"} />
+              </button>
             ))}
           </div>
-        </div>
+          <div className="arrows">
+            <button type="button" className="mag" aria-label={t("promo.prev")} onClick={() => show(index - 1)}><ChevronLeft size={18} strokeWidth={2.5} /></button>
+            <button type="button" className="mag" aria-label={t("promo.next")} onClick={() => show(index + 1)}><ChevronRight size={18} strokeWidth={2.5} /></button>
+          </div>
+        </div></div>
       </section>
 
+      <MenuBar home />
+
+      {/* Trust strip */}
+      <div className="trust"><div className="wrap"><div className="row stagger">
+        {[
+          { icon: ShieldCheck, k: "genuine" },
+          { icon: Wrench, k: "repairs" },
+          { icon: Truck, k: "delivery" },
+          { icon: Clock, k: "tracking" },
+        ].map(({ icon: Icon, k }) => (
+          <div key={k} className="it">
+            <span className="ic"><Icon size={20} /></span>
+            <span><b>{t(`rich.${k}`)}</b><small>{t(`rich.${k}Desc`)}</small></span>
+          </div>
+        ))}
+      </div></div></div>
+
+      {/* Brand marquee (the list is repeated so the loop is seamless) */}
+      <div className="marquee" aria-label={t("rich.brands")}>
+        <div className="track">
+          {[0, 1].map((copy) => (
+            <div key={copy} className="set" aria-hidden={copy === 1}>
+              {BRANDS.map((b) => <span key={b}>{b}</span>)}
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Categories */}
       {categories.length > 0 && (
-        <section className="reveal mx-auto max-w-7xl px-4 py-7">
-          <div className="mb-4 flex items-baseline justify-between">
-            <h2 className="text-[22px] font-bold tracking-tight">{t("home.shopByCategory")}</h2>
-            <Link href="/products" className="text-sm font-semibold text-crimson hover:underline">{t("home.viewAllShort")}</Link>
+        <section className="sec"><div className="wrap">
+          <div className="head rise">
+            <div><div className="eyebrow">{num()}&nbsp;{t("rich.eyBrowse")}</div><h2>{t("home.shopByCategory")}</h2></div>
+            <Link className="link" href="/products">{t("home.viewAllShort")} →</Link>
           </div>
-          {/* One row whatever the category count: scrolls on phones, shares the width on desktop */}
-          {/* pt-1/-mt-1: headroom inside the scroll box so the hover lift isn't clipped, without shifting the row */}
-          <div className="-mt-1 flex gap-2 overflow-x-auto pb-1 pt-1 [scrollbar-width:none] sm:gap-3">
+          <div className="cats stagger">
             {categories.map((cat) => {
               const Icon = CATEGORY_ICONS[cat] || Package;
               const photo = CATEGORY_PHOTOS.has(cat) ? `/categories/${cat.toLowerCase()}.jpg` : null;
               return (
-                <Link
-                  key={cat}
-                  href={`/products?category=${encodeURIComponent(cat)}`}
-                  className="group flex w-[104px] flex-shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card text-center text-xs font-semibold transition-[border-color,translate] duration-200 hover:-translate-y-0.5 hover:border-crimson sm:w-[120px] sm:text-sm lg:w-auto lg:min-w-0 lg:flex-1"
-                >
-                  <span className="relative grid aspect-square place-items-center overflow-hidden bg-[#e2dfdc] text-wine">
+                <Link key={cat} className="cat" href={`/products?category=${encodeURIComponent(cat)}`}>
+                  <span className="im" data-explore={t("rich.explore")}>
                     {photo ? (
-                      <Image
-                        src={photo}
-                        alt=""
-                        fill
-                        sizes="(max-width: 640px) 104px, (max-width: 1024px) 120px, 140px"
-                        className="object-cover transition-transform duration-300 group-hover:scale-[1.06]"
-                      />
+                      <Image src={photo} alt="" fill sizes="(max-width: 700px) 33vw, (max-width: 1100px) 20vw, 140px" />
                     ) : (
                       <Icon className="size-8" strokeWidth={1.5} />
                     )}
                   </span>
-                  <span className="px-1.5 py-2.5">{t(`categories.${cat}`, { defaultValue: cat })}</span>
+                  <span>{t(`categories.${cat}`, { defaultValue: cat })}</span>
                 </Link>
               );
             })}
           </div>
-        </section>
+        </div></section>
       )}
 
       {/* Popular products */}
       {popular.length > 0 && (
-        <section className="reveal mx-auto max-w-7xl px-4 py-7">
-          <div className="mb-4 flex items-baseline justify-between">
-            <h2 className="text-[22px] font-bold tracking-tight">{t("home.popular")}</h2>
-            <Link href="/products" className="text-sm font-semibold text-crimson hover:underline">{t("home.viewAll")}</Link>
+        <section className="sec"><div className="wrap">
+          <div className="head rise">
+            <div><div className="eyebrow">{num()}&nbsp;{t("rich.eyBest")}</div><h2>{t("home.popular")}</h2></div>
+            <Link className="link" href="/products">{t("home.viewAll")} →</Link>
           </div>
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
-            {popular.map((product) => (
-              <ProductCard key={product._id} product={product} />
-            ))}
+          <div className="prods stagger">
+            {popular.map((product) => <ProductCard key={product._id} product={product} />)}
           </div>
-        </section>
+        </div></section>
       )}
 
+      {/* Numbers band */}
+      <section className="stats"><div className="wrap">
+        <div className="eyebrow rise">{num()}&nbsp;{t("rich.eyNumbers")}</div>
+        <h2 className="rise">{t("rich.statsTitle")}</h2>
+        <div className="stat-row stagger">
+          <div className="stat"><b><span data-count="12000">0</span><em>+</em></b><small>{t("rich.statSold")}</small></div>
+          <div className="stat"><b><span data-count="3500">0</span><em>+</em></b><small>{t("rich.statRepairs")}</small></div>
+          <div className="stat"><b><span data-count="4.8" data-dec="1">0</span><em>★</em></b><small>{t("rich.statRating")}</small></div>
+          <div className="stat"><b><span data-count="48">0</span><em>h</em></b><small>{t("rich.statTurnaround")}</small></div>
+        </div>
+      </div></section>
+
       {/* Repair service */}
-      <section className="reveal mx-auto max-w-7xl px-4 py-7">
-        <div className="grid items-center gap-8 rounded-2xl border border-border bg-card p-6 md:p-8 lg:grid-cols-[1fr_1.4fr]">
+      <section className="sec"><div className="wrap">
+        <div className="repair rise spot">
           <div>
-            <h2 className="text-[22px] font-bold tracking-tight">{t("home.repairService")}</h2>
-            <p className="mt-2 max-w-[40ch] text-muted-foreground">{t("home.repairServiceDesc")}</p>
-            <Link
-              href="/book-repair"
-              className="mt-5 inline-flex h-[46px] items-center gap-2 rounded-[10px] bg-crimson px-[22px] text-[15px] font-semibold text-white transition-colors hover:bg-wine active:scale-[0.97]"
-            >
-              <Wrench className="size-4" />
-              {t("home.bookRepair")}
-            </Link>
+            <div className="eyebrow">{num()}&nbsp;{t("rich.eyRepair")}</div>
+            <h2>{t("rich.repairTitle")}</h2>
+            <p>{t("home.repairServiceDesc")}</p>
+            <div className="steps">
+              <div><i>1</i>{t("rich.step1")}</div>
+              <div><i>2</i>{t("rich.step2")}</div>
+              <div><i>3</i>{t("rich.step3")}</div>
+            </div>
+            <Link className="btn btn-red" style={{ marginTop: 28 }} href="/book-repair">{t("home.bookRepair")} <Arrow /></Link>
           </div>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          <div className="devices stagger">
             {REPAIR_DEVICES.map((type) => (
-              <Link
-                key={type}
-                href="/book-repair"
-                className="group overflow-hidden rounded-xl border border-border bg-card transition-[border-color,translate] duration-200 hover:-translate-y-0.5 hover:border-crimson"
-              >
-                <span className="relative block aspect-[4/3] overflow-hidden bg-muted">
-                  <Image
-                    src={`/repair/${type}.jpg`}
-                    alt={t(`repair.devices.${type}`)}
-                    fill
-                    sizes="(max-width: 640px) 45vw, (max-width: 1024px) 22vw, 180px"
-                    className="object-cover transition-transform duration-300 group-hover:scale-[1.04]"
-                  />
+              <Link key={type} className="dev" href="/book-repair">
+                <span className="im">
+                  <Image src={`/repair/${type}.jpg`} alt={t(`repair.devices.${type}`)} fill sizes="(max-width: 700px) 45vw, (max-width: 1100px) 22vw, 180px" />
                 </span>
-                <span className="flex items-center justify-between gap-1 px-3 py-2.5 text-[13.5px] font-semibold">
-                  {t(`repair.devices.${type}`)}
-                  <ChevronRight className="size-4 text-crimson transition-transform duration-200 group-hover:translate-x-0.5" />
-                </span>
+                <span>{t(`repair.devices.${type}`)} <ChevronRight size={16} className="text-crimson" /></span>
               </Link>
             ))}
           </div>
         </div>
+      </div></section>
+
+      {/* Full-bleed banner with parallax photo */}
+      <section ref={bannerRef} className="banner">
+        <div ref={bannerPhRef} className="ph" />
+        <div className="wrap rise">
+          <div className="eyebrow">{t("rich.bannerEyebrow")}</div>
+          <h2>{t("rich.bannerTitle")}</h2>
+          <p>{t("rich.bannerText")}</p>
+          <div className="cta">
+            <Link className="btn btn-red mag" href="/book-repair">{t("home.bookRepair")} <Arrow /></Link>
+            <Link className="btn btn-ghost mag" href="/track-repair">{t("nav.trackRepair")}</Link>
+          </div>
+        </div>
       </section>
 
-      {/* Why customers choose us */}
-      <section className="reveal mx-auto max-w-7xl px-4 py-7">
-        <h2 className="mb-4 text-[22px] font-bold tracking-tight">{t("home.whyUs")}</h2>
-        <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
-          <div className="flex flex-col justify-center rounded-2xl border-l-4 border-crimson bg-navy p-7 text-white">
-            <div className="flex gap-0.5 text-peach">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="size-5 fill-current" />
-              ))}
-            </div>
-            <p className="mt-3 text-lg font-semibold">{t("home.reviewedTitle")}</p>
-            <p className="mt-1 text-sm text-on-dark-muted">{t("home.reviewedDesc")}</p>
-            <a
-              href={GOOGLE_REVIEW_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 text-sm font-semibold text-peach hover:underline"
-            >
+      {/* Why us */}
+      <section className="sec"><div className="wrap">
+        <div className="head rise"><div><div className="eyebrow">{num()}&nbsp;{t("rich.eyWhy")}</div><h2>{t("home.whyUs")}</h2></div></div>
+        <div className="why">
+          <div className="rating rise">
+            <div className="stars">{[...Array(5)].map((_, i) => <Star key={i} size={22} fill="currentColor" />)}</div>
+            <b>{t("rich.trustedLocally")}</b>
+            <p>{t("home.reviewedDesc")}</p>
+            <a className="link" style={{ color: "var(--peach)", marginTop: 16 }} href={GOOGLE_REVIEW_URL} target="_blank" rel="noopener noreferrer">
               {t("home.reviewCta")} →
             </a>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="feats stagger">
             {[
               { icon: ShieldCheck, title: t("home.quality"), desc: t("home.qualityDesc") },
               { icon: Wrench, title: t("home.expertRepair"), desc: t("home.expertRepairDesc") },
               { icon: Zap, title: t("home.fastService"), desc: t("home.fastServiceDesc") },
             ].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="rounded-xl border border-border bg-card p-5">
-                <span className="grid size-10 place-items-center rounded-[10px] bg-accent text-wine">
-                  <Icon className="size-5" />
-                </span>
-                <h3 className="mt-3 font-semibold">{title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
+              <div key={title} className="feat spot">
+                <span className="ic"><Icon size={22} /></span>
+                <h3>{title}</h3>
+                <p>{desc}</p>
               </div>
             ))}
           </div>
         </div>
-      </section>
+      </div></section>
 
       {/* Visit the shop */}
-      <section className="reveal mx-auto max-w-7xl px-4 pb-10 pt-7">
-        <h2 className="mb-4 text-[22px] font-bold tracking-tight">{t("home.visitShop")}</h2>
-        <div className="grid overflow-hidden rounded-2xl border border-border bg-card lg:grid-cols-[1fr_1.3fr]">
-          <div className="flex flex-col gap-4 p-6 md:p-8">
+      <section className="sec"><div className="wrap">
+        <div className="head rise"><div><div className="eyebrow">{num()}&nbsp;{t("rich.eyVisit")}</div><h2>{t("home.visitShop")}</h2></div></div>
+        <div className="visit rise">
+          <ul>
             {[
               { icon: MapPin, label: t("home.address"), value: SHOP_ADDRESS },
               { icon: Clock, label: t("home.hours"), value: SHOP_HOURS },
               { icon: Phone, label: t("home.call"), value: SHOP_PHONE, href: `tel:${SHOP_PHONE.replace(/\s/g, "")}` },
               { icon: MessageCircle, label: t("home.whatsapp"), value: t("home.whatsappDesc"), href: `https://wa.me/${SHOP_WHATSAPP}` },
             ].map(({ icon: Icon, label, value, href }) => (
-              <div key={label} className="flex items-start gap-3">
-                <span className="grid size-[38px] flex-shrink-0 place-items-center rounded-[10px] bg-accent text-wine">
-                  <Icon className="size-[18px]" />
-                </span>
-                <div className="text-sm">
-                  <b className="block">{label}</b>
+              <li key={label}>
+                <span className="ic"><Icon size={18} /></span>
+                <div>
+                  <b>{label}</b>
                   {href ? (
-                    <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer" className="text-muted-foreground hover:text-crimson">
-                      {value}
-                    </a>
+                    <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer">{value}</a>
                   ) : (
-                    <span className="text-muted-foreground">{value}</span>
+                    <span>{value}</span>
                   )}
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group grid min-h-[220px] place-items-center border-t border-border bg-muted text-center text-sm text-muted-foreground lg:border-l lg:border-t-0"
-          >
+          </ul>
+          <a className="map" href={mapsUrl} target="_blank" rel="noopener noreferrer">
             <span>
-              <MapPin className="mx-auto mb-2 size-9 text-crimson" />
+              <MapPin size={36} className="mx-auto mb-2 text-peach" />
               {SHOP_ADDRESS}
-              <span className="mt-1 block font-semibold text-crimson group-hover:underline">{t("home.directions")}</span>
+              <b>{t("home.directions")}</b>
             </span>
           </a>
         </div>
-      </section>
+      </div></section>
     </div>
   );
 }

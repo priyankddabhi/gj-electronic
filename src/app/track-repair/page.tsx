@@ -8,6 +8,7 @@ import { Search, CheckCircle2, Circle, Clock, LogIn, CheckCircle, Home, Lock } f
 import { REPAIR_STATUSES, SHOP_WHATSAPP } from "@/lib/constants";
 import { useCustomerStore } from "@/store/customer";
 import { MY_REPAIRS_KEY, getSavedIds } from "@/lib/myTracking";
+import PageHero from "@/components/PageHero";
 
 interface Repair {
   trackingId: string;
@@ -79,6 +80,8 @@ function TrackRepairContent() {
     REPAIR_STATUSES.indexOf(status as (typeof REPAIR_STATUSES)[number]);
 
   return (
+    <>
+    <PageHero eyebrow={t("rich.pTrack")} title={t("track.repairTitle")} />
     <div className="mx-auto max-w-2xl px-4 py-8">
       {isNew && (
         <div className="mb-6 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/30">
@@ -89,8 +92,6 @@ function TrackRepairContent() {
           </div>
         </div>
       )}
-
-      <h1 className="mb-4 text-2xl font-bold">{t("track.repairTitle")}</h1>
 
       {customer ? (
         <p className="mb-4 text-sm text-muted-foreground">
@@ -247,5 +248,6 @@ function TrackRepairContent() {
         })}
       </div>
     </div>
+    </>
   );
 }
