@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     preferredDate,
     images,
     trackingId: generateTrackingId(),
-    statusHistory: [{ status: "received", date: new Date(), note: "Repair booked" }],
+    statusHistory: [{ status: "applied", date: new Date(), note: "Request submitted by customer" }],
   });
   return NextResponse.json({ trackingId: repair.trackingId }, { status: 201 });
 }

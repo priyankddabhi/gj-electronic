@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { Wrench } from "lucide-react";
-import { SHOP_NAME, SHOP_PHONE, SHOP_HOURS } from "@/lib/constants";
+import { SHOP_NAME, SHOP_PHONE } from "@/lib/constants";
+import { useShopInfo } from "@/lib/shopInfo";
 
 export default function Footer() {
+  const shop = useShopInfo();
   const { t } = useTranslation();
 
   return (
@@ -44,12 +46,12 @@ export default function Footer() {
           <h4>{t("footer.contact")}</h4>
           <ul>
             <li><a href={`tel:${SHOP_PHONE.replace(/\s/g, "")}`}>{SHOP_PHONE}</a></li>
-            <li>{SHOP_HOURS}</li>
+            <li>{shop.hours}</li>
           </ul>
         </div>
       </div>
 
-      <div className="wordmark" aria-hidden>GJ ELECTRONIC</div>
+      <div className="wrap wordmark" aria-hidden>GJ ELECTRONIC</div>
 
       <div className="copyright">
         <p className="wrap">

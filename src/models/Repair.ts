@@ -9,12 +9,17 @@ export interface IRepair extends Document {
   images: string[];
   preferredDate: string;
   status:
+    | "applied"
     | "received"
     | "diagnosing"
     | "repairing"
     | "testing"
     | "ready"
     | "delivered";
+  repairMethod: "electrician-visit" | "shop-repair" | null;
+  electricianName: string;
+  electricianPhone: string;
+  estimatedPickupTime: string;
   estimatedCost: number | null;
   diagnosisNotes: string;
   statusHistory: { status: string; date: Date; note: string }[];
@@ -35,16 +40,13 @@ const RepairSchema = new Schema<IRepair>(
     preferredDate: { type: String, default: "" },
     status: {
       type: String,
-      enum: [
-        "received",
-        "diagnosing",
-        "repairing",
-        "testing",
-        "ready",
-        "delivered",
-      ],
-      default: "received",
+      enum: ["applied", "received", "diagnosing", "repairing", "testing", "ready", "delivered"],
+      default: "applied",
     },
+    repairMethod: { type: String, enum: ["electrician-visit", "shop-repair"], default: null },
+    electricianName: { type: String, default: "" },
+    electricianPhone: { type: String, default: "" },
+    estimatedPickupTime: { type: String, default: "" },
     estimatedCost: { type: Number, default: null },
     diagnosisNotes: { type: String, default: "" },
     statusHistory: [
@@ -71,6 +73,9 @@ const RepairSchema = new Schema<IRepair>(
 RepairSchema.index({ phone: 1 });
 RepairSchema.index({ trackingId: 1 });
 RepairSchema.index({ status: 1 });
+
+// In dev, hot reload keeps an old compiled schema in mongoose.models; strict mode then silently drops new fields.
+if (process.env.NODE_ENV !== "production" && mongoose.models.Repair) mongoose.deleteModel("Repair");
 
 export default mongoose.models.Repair ||
   mongoose.model<IRepair>("Repair", RepairSchema);

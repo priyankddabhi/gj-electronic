@@ -28,14 +28,8 @@ import {
   Heater,
   type LucideIcon,
 } from "lucide-react";
-import {
-  SHOP_NAME,
-  SHOP_ADDRESS,
-  SHOP_HOURS,
-  SHOP_PHONE,
-  SHOP_WHATSAPP,
-  GOOGLE_REVIEW_URL,
-} from "@/lib/constants";
+import { SHOP_NAME, SHOP_PHONE, GOOGLE_REVIEW_URL } from "@/lib/constants";
+import { useShopInfo } from "@/lib/shopInfo";
 import ProductCard from "@/components/ProductCard";
 import MenuBar from "@/components/MenuBar";
 import {
@@ -99,6 +93,7 @@ function Arrow() {
 }
 
 export default function HomePage() {
+  const shop = useShopInfo();
   const { t } = useTranslation();
   const [categories, setCategories] = useState<string[]>([]);
   const [popular, setPopular] = useState<Product[]>([]);
@@ -240,7 +235,7 @@ export default function HomePage() {
     return () => { list.forEach((c) => c()); list.length = 0; };
   }, []);
 
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${SHOP_NAME} ${SHOP_ADDRESS}`)}`;
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${SHOP_NAME} ${shop.address}`)}`;
   let n = 0;
   const num = () => String(++n).padStart(2, "0");
 
@@ -482,10 +477,10 @@ export default function HomePage() {
         <div className="visit rise">
           <ul>
             {[
-              { icon: MapPin, label: t("home.address"), value: SHOP_ADDRESS },
-              { icon: Clock, label: t("home.hours"), value: SHOP_HOURS },
+              { icon: MapPin, label: t("home.address"), value: shop.address },
+              { icon: Clock, label: t("home.hours"), value: shop.hours },
               { icon: Phone, label: t("home.call"), value: SHOP_PHONE, href: `tel:${SHOP_PHONE.replace(/\s/g, "")}` },
-              { icon: MessageCircle, label: t("home.whatsapp"), value: t("home.whatsappDesc"), href: `https://wa.me/${SHOP_WHATSAPP}` },
+              { icon: MessageCircle, label: t("home.whatsapp"), value: t("home.whatsappDesc"), href: `https://wa.me/${shop.whatsapp}` },
             ].map(({ icon: Icon, label, value, href }) => (
               <li key={label}>
                 <span className="ic"><Icon size={18} /></span>
@@ -503,7 +498,7 @@ export default function HomePage() {
           <a className="map" href={mapsUrl} target="_blank" rel="noopener noreferrer">
             <span>
               <MapPin size={36} className="mx-auto mb-2 text-peach" />
-              {SHOP_ADDRESS}
+              {shop.address}
               <b>{t("home.directions")}</b>
             </span>
           </a>

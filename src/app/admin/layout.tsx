@@ -13,6 +13,9 @@ import {
   Settings,
   Menu,
   X,
+  Zap,
+  Inbox,
+  Star,
 } from "lucide-react";
 import { SHOP_NAME } from "@/lib/constants";
 import { ADMIN_THEME_EVENT, applyAdminTheme, toSiteTheme, type SiteTheme } from "@/lib/theme";
@@ -22,8 +25,11 @@ const navItems = [
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { href: "/admin/repairs", label: "Repairs", icon: Wrench },
+  { href: "/admin/electricians", label: "Electricians", icon: Zap },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/customers", label: "Customers", icon: Users },
+  { href: "/admin/reports", label: "Reports", icon: Inbox },
+  { href: "/admin/reviews", label: "Reviews", icon: Star },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

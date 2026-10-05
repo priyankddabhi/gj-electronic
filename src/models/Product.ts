@@ -15,6 +15,8 @@ export interface IProduct extends Document {
   warrantyTerms: string;
   inStock: boolean;
   featured: boolean;
+  ratingAvg: number;
+  ratingCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,6 +41,9 @@ const ProductSchema = new Schema<IProduct>(
     warrantyTerms: { type: String, default: "" },
     inStock: { type: Boolean, default: true },
     featured: { type: Boolean, default: false },
+    // Kept up to date by /api/products/[id]/rate, used for the Popularity sort
+    ratingAvg: { type: Number, default: 0 },
+    ratingCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

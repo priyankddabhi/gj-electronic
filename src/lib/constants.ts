@@ -31,6 +31,7 @@ export const DEVICE_TYPES = [
 ] as const;
 
 export const REPAIR_STATUSES = [
+  "applied",
   "received",
   "diagnosing",
   "repairing",

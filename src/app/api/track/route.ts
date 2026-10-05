@@ -8,7 +8,7 @@ import Order from "@/models/Order";
 
 type Tracked = { phone: string; status: string; createdAt: Date; statusHistory?: { status: string; date: Date }[] };
 
-// Anyone with the ID sees the progress only; the logged-in owner sees everything
+// Orders: show status only
 function statusOnly<T extends Tracked>(doc: T, idField: "orderId" | "trackingId") {
   return {
     [idField]: (doc as unknown as Record<string, string>)[idField],
@@ -16,6 +16,35 @@ function statusOnly<T extends Tracked>(doc: T, idField: "orderId" | "trackingId"
     createdAt: doc.createdAt,
     statusHistory: (doc.statusHistory || []).map(({ status, date }) => ({ status, date })),
     limited: true,
+  };
+}
+
+// Electrician details reach the customer only when the shop chose an electrician visit
+function electricianFields(doc: Record<string, unknown>) {
+  const visit = doc.repairMethod === "electrician-visit";
+  return {
+    electricianName: visit ? (doc.electricianName ?? "") : "",
+    electricianPhone: visit ? (doc.electricianPhone ?? "") : "",
+  };
+}
+
+// Repairs: also expose the customer-facing review fields so the method info works
+// without requiring the customer to be logged in (tracking ID alone = auth, per Option A)
+function repairStatusOnly(doc: Record<string, unknown>) {
+  return {
+    trackingId: doc.trackingId,
+    status: doc.status,
+    createdAt: doc.createdAt,
+    statusHistory: ((doc.statusHistory || []) as Array<{ status: string; date: Date }>).map(
+      ({ status, date }) => ({ status, date })
+    ),
+    limited: true,
+    deviceType: doc.deviceType,
+    problemDescription: doc.problemDescription,
+    repairMethod: doc.repairMethod ?? null,
+    ...electricianFields(doc),
+    estimatedPickupTime: doc.estimatedPickupTime ?? "",
+    estimatedCost: doc.estimatedCost ?? null,
   };
 }
 
@@ -45,6 +74,11 @@ export async function GET(req: NextRequest) {
   const docs = (await Model.find(filter).sort({ createdAt: -1 }).limit(50).lean()) as unknown as (Tracked &
     Record<string, unknown>)[];
 
-  const result = docs.map((d) => (ownerKey && samePhone(d.phone) === ownerKey ? d : statusOnly(d, idField)));
+  const result = docs.map((d) => {
+    if (ownerKey && samePhone(d.phone) === ownerKey)
+      return type === "repair" ? { ...d, ...electricianFields(d as unknown as Record<string, unknown>) } : d;
+    if (type === "repair") return repairStatusOnly(d as unknown as Record<string, unknown>);
+    return { ...statusOnly(d, idField), deliveryType: d.deliveryType ?? "delivery" };
+  });
   return NextResponse.json({ [type === "repair" ? "repairs" : "orders"]: result });
 }

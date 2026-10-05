@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Plus, Pencil, Trash2, X, Package, Upload } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Package, Upload, Tags, ChevronDown } from "lucide-react";
 
 interface Product {
   _id: string;
@@ -48,8 +48,11 @@ export default function AdminProductsPage() {
   const [uploadError, setUploadError] = useState("");
   const [specKey, setSpecKey] = useState("");
   const [specVal, setSpecVal] = useState("");
+  const [selected, setSelected] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
+  const [addMenu, setAddMenu] = useState(false);
+  const [showCategories, setShowCategories] = useState(false);
 
   const loadCategories = () => {
     fetch("/api/categories")
@@ -150,6 +153,22 @@ export default function AdminProductsPage() {
       return;
     }
     setProducts((prev) => prev.filter((p) => p._id !== id));
+    setSelected((prev) => prev.filter((x) => x !== id));
+  };
+
+  const toggleSelected = (id: string) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const deleteSelected = async () => {
+    if (!confirm(`Delete ${selected.length} selected product(s)? This cannot be undone.`)) return;
+    const results = await Promise.all(
+      selected.map(async (id) => ({ id, ok: (await fetch(`/api/products/${id}`, { method: "DELETE" })).ok }))
+    );
+    const deleted = results.filter((r) => r.ok).map((r) => r.id);
+    setProducts((prev) => prev.filter((p) => !deleted.includes(p._id)));
+    setSelected((prev) => prev.filter((id) => !deleted.includes(id)));
+    if (deleted.length < results.length)
+      alert(`${results.length - deleted.length} product(s) could not be deleted. Please try again.`);
   };
 
   const uploadImages = async (files: FileList | null) => {
@@ -197,13 +216,39 @@ export default function AdminProductsPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Products</h1>
-        <button
-          onClick={openNew}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="size-4" />
-          Add Product
-        </button>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setAddMenu((v) => !v)}
+            aria-expanded={addMenu}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="size-4" />
+            Add
+            <ChevronDown className="size-3.5" />
+          </button>
+          {addMenu && (
+            <>
+              <button type="button" aria-label="Close menu" className="fixed inset-0 z-40 cursor-default" onClick={() => setAddMenu(false)} />
+              <div className="absolute right-0 z-50 mt-1.5 w-48 overflow-hidden rounded-lg border border-border bg-background shadow-lg">
+                <button
+                  type="button"
+                  onClick={() => { setAddMenu(false); openNew(); }}
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm hover:bg-muted"
+                >
+                  <Package className="size-4 text-muted-foreground" /> Product
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAddMenu(false); setShowCategories(true); }}
+                  className="flex w-full items-center gap-2 border-t border-border px-3 py-2.5 text-left text-sm hover:bg-muted"
+                >
+                  <Tags className="size-4 text-muted-foreground" /> Category
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Product Form Modal */}
@@ -485,14 +530,22 @@ export default function AdminProductsPage() {
         </div>
       )}
 
-      {/* Category Management */}
-      <div className="mb-6 rounded-xl border border-border p-4">
-        <h3 className="mb-3 text-sm font-semibold">Manage Categories</h3>
+      {/* Category Modal (opened from Add → Category) */}
+      {showCategories && (
+      <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-20">
+      <div className="w-full max-w-md rounded-xl border border-border bg-background p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-bold">Categories</h2>
+          <button type="button" aria-label="Close" onClick={() => setShowCategories(false)} className="p-1 text-muted-foreground hover:text-foreground">
+            <X className="size-5" />
+          </button>
+        </div>
         <div className="mb-3 flex gap-2">
           <input
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
             placeholder="New category name..."
+            autoFocus
             className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             onKeyDown={(e) => e.key === "Enter" && addCategory()}
           />
@@ -520,6 +573,8 @@ export default function AdminProductsPage() {
           ))}
         </div>
       </div>
+      </div>
+      )}
 
       {/* Products Table */}
       {loading ? (
@@ -530,10 +585,34 @@ export default function AdminProductsPage() {
           <p className="text-muted-foreground">No products yet</p>
         </div>
       ) : (
+        <>
+        {selected.length > 0 && (
+          <div className="mb-2 flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm">
+            <span className="font-medium">{selected.length} selected</span>
+            <button
+              type="button"
+              onClick={deleteSelected}
+              className="flex items-center gap-1.5 rounded border border-destructive/40 px-3 py-1 text-xs font-medium text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="size-3.5" /> Delete selected
+            </button>
+            <button type="button" onClick={() => setSelected([])} className="text-xs text-muted-foreground hover:underline">
+              Clear
+            </button>
+          </div>
+        )}
         <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
+                <th className="w-10 px-3 py-3">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all products"
+                    checked={selected.length === products.length}
+                    onChange={(e) => setSelected(e.target.checked ? products.map((p) => p._id) : [])}
+                  />
+                </th>
                 <th className="px-4 py-3 text-left font-medium">Product</th>
                 <th className="px-4 py-3 text-left font-medium">Category</th>
                 <th className="px-4 py-3 text-right font-medium">Price</th>
@@ -543,7 +622,15 @@ export default function AdminProductsPage() {
             </thead>
             <tbody>
               {products.map((p) => (
-                <tr key={p._id} className="border-b border-border last:border-0">
+                <tr key={p._id} className={`border-b border-border last:border-0 ${selected.includes(p._id) ? "bg-muted/40" : ""}`}>
+                  <td className="w-10 px-3 py-3">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${p.name}`}
+                      checked={selected.includes(p._id)}
+                      onChange={() => toggleSelected(p._id)}
+                    />
+                  </td>
                   <td className="px-4 py-3">
                     <p className="font-medium">{p.name}</p>
                     {p.brand && (
@@ -589,6 +676,7 @@ export default function AdminProductsPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );

@@ -4,12 +4,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ShoppingCart, Search, Wrench, ExternalLink, LogOut, Settings } from "lucide-react";
+import { ShoppingCart, Search, Wrench, ExternalLink, LogOut, Settings, Zap } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 import { useCustomerStore } from "@/store/customer";
 import { SHOP_NAME } from "@/lib/constants";
 import { startLenis } from "@/lib/richMotion";
 import MenuBar from "@/components/MenuBar";
+import AdminThemeButton from "@/components/AdminThemeButton";
 
 /*
   Shop header (rich theme): a top row with logo, search, Settings and Cart that scrolls away, then the
@@ -96,6 +97,7 @@ export default function Navbar() {
             </span>
           </Link>
           <div className="ml-auto flex flex-shrink-0 items-center gap-1.5">
+            <AdminThemeButton />
             <Link
               href="/"
               target="_blank"
@@ -143,6 +145,12 @@ export default function Navbar() {
               placeholder={t("nav.searchPlaceholder")}
             />
           </form>
+          <div className="top-ctas">
+            <Link href="/book-repair" className="btn-hire">
+              <Zap size={15} />
+              Book Electrician
+            </Link>
+          </div>
           <div className="tools">
             <Link href="/settings" aria-label={t("settings.title")} className={pathname.startsWith("/settings") ? "on" : undefined}>
               <Settings size={20} />

@@ -177,16 +177,27 @@
     "search": "Track",
     "notFound": "No record found. Please check your ID or phone number.",
     "status": {
+      "applied": "Applied",
       "received": "Received",
       "diagnosing": "Diagnosing",
       "repairing": "Repairing",
       "testing": "Testing",
-      "ready": "Ready for Pickup",
+      "ready": "Dispatch",
       "delivered": "Delivered",
+      "electricianVisit": "Electrician Visit",
+      "pickup": "Pickup",
+      "repairMethod": "Repair Method",
       "placed": "Placed",
       "confirmed": "Confirmed",
       "dispatched": "Dispatched"
     },
+    "reviewingRequest": "We've got your request",
+    "reviewingDesc": "Our team is checking it now. We'll update you here soon.",
+    "electricianVisitDecided": "An electrician will visit you",
+    "shopRepairDecided": "Please bring your device to the shop",
+    "shopRepairInstr": "Drop your device at the shop or our team will arrange pickup. Repair begins once we receive it.",
+    "estimatedPickup": "Expected by",
+    "electrician": "Electrician",
     "device": "Device",
     "problem": "Problem",
     "estimatedCost": "Estimated Cost",
@@ -210,7 +221,19 @@
     "backHome": "Back to Home",
     "currentStatus": "Current status",
     "whatsappOrderMsg": "Hello, my order ID is {{id}}.",
-    "whatsappRepairMsg": "Hello, my repair tracking ID is {{id}}."
+    "whatsappRepairMsg": "Hello, my repair tracking ID is {{id}}.",
+    "pickupStatus": {
+      "placed": "Placed",
+      "confirmed": "Confirmed",
+      "dispatched": "Ready for Pickup",
+      "delivered": "Collected"
+    },
+    "pickupWaitTitle": "Shop Pickup",
+    "pickupWaitDesc": "We're getting your order ready. We'll show here when you can collect it from the shop.",
+    "pickupReadyTitle": "Your order is ready!",
+    "pickupReadyDesc": "Please come to the shop and collect it. No delivery needed.",
+    "homeDeliverySection": "Home Delivery",
+    "shopPickupSection": "Shop Pickup"
   },
   "about": {
     "title": "About GJ Electronic",
@@ -287,7 +310,8 @@
     "password": "Password must be at least 6 characters",
     "device": "Select a device type",
     "problem": "Please describe the problem",
-    "address": "Address is required for home delivery"
+    "address": "Address is required for home delivery",
+    "message": "Please write at least a few words"
   },
   "rich": {
     "s1Text": "Fans, lights, switches and wires from genuine brands — with a proper bill, warranty and home delivery.",
@@ -328,5 +352,23 @@
     "pAbout": "About us",
     "pSettings": "Your account",
     "productsSub": "Genuine brands with a bill and warranty."
+  },
+  "report": {
+    "title": "Report / Complaint",
+    "desc": "Have a problem, question or complaint? Tell us and our team will get back to you.",
+    "type": "Type",
+    "types": {
+      "complaint": "Complaint",
+      "query": "Query",
+      "report": "Report a problem"
+    },
+    "refId": "Order / Repair ID (optional)",
+    "refIdHint": "e.g. ORD-2026-1234",
+    "message": "Your message",
+    "submit": "Send",
+    "sending": "Sending…",
+    "success": "Thank you — we received your message",
+    "successDesc": "Our team will contact you soon on the phone number you gave.",
+    "sendAnother": "Send another message"
   }
 }

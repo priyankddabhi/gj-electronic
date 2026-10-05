@@ -4,8 +4,9 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { Search, CheckCircle2, Circle, Clock, LogIn, CheckCircle, Home, Lock } from "lucide-react";
-import { ORDER_STATUSES, SHOP_WHATSAPP } from "@/lib/constants";
+import { Search, CheckCircle2, Circle, Clock, LogIn, CheckCircle, Home, Lock, Store, MapPin, Truck } from "lucide-react";
+import { ORDER_STATUSES } from "@/lib/constants";
+import { useShopInfo } from "@/lib/shopInfo";
 import { useCustomerStore } from "@/store/customer";
 import { MY_ORDERS_KEY, getSavedIds } from "@/lib/myTracking";
 import PageHero from "@/components/PageHero";
@@ -15,6 +16,7 @@ interface Order {
   status: string;
   createdAt: string;
   limited?: boolean;
+  deliveryType?: string;
   items?: { name: string; quantity: number; price: number }[];
   total?: number;
 }
@@ -39,6 +41,7 @@ export default function TrackOrderPage() {
 }
 
 function TrackOrderContent() {
+  const shop = useShopInfo();
   const { t } = useTranslation();
   const searchParams = useSearchParams();
   const idParam = searchParams.get("id") || "";
@@ -50,6 +53,7 @@ function TrackOrderContent() {
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loginRequired, setLoginRequired] = useState(false);
+  const [tab, setTab] = useState<"delivery" | "pickup" | null>(null);
 
   // Auto-load every order this browser placed, plus all orders on the logged-in phone number
   useEffect(() => {
@@ -76,6 +80,17 @@ function TrackOrderContent() {
 
   const getStatusIndex = (status: string) =>
     ORDER_STATUSES.indexOf(status as (typeof ORDER_STATUSES)[number]);
+
+  const deliveryOrders = orders.filter((o) => o.deliveryType !== "pickup");
+  const pickupOrders = orders.filter((o) => o.deliveryType === "pickup");
+  const showSplit = deliveryOrders.length > 0 && pickupOrders.length > 0;
+  const groups = [
+    { key: "delivery", title: t("track.homeDeliverySection"), Icon: Truck, list: deliveryOrders },
+    { key: "pickup", title: t("track.shopPickupSection"), Icon: Store, list: pickupOrders },
+  ].filter((g) => g.list.length > 0);
+  const newOrderTab = orders.find((o) => o.orderId === idParam)?.deliveryType === "pickup" ? "pickup" : "delivery";
+  const activeTab = tab ?? newOrderTab;
+  const visibleGroups = showSplit ? groups.filter((g) => g.key === activeTab) : groups;
 
   return (
     <>
@@ -135,11 +150,36 @@ function TrackOrderContent() {
         <div className="py-10 text-center text-muted-foreground">{t("track.notFound")}</div>
       )}
 
+      <div className="space-y-8">
+      {showSplit && (
+        <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted p-1" role="tablist">
+          {groups.map((g) => (
+            <button
+              key={g.key}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === g.key}
+              onClick={() => setTab(g.key as "delivery" | "pickup")}
+              className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${activeTab === g.key ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <g.Icon className="size-4" />
+              {g.title}
+              <span className="text-xs opacity-70">({g.list.length})</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {visibleGroups.map((g) => (
+      <section key={g.key}>
       <div className="space-y-4">
-        {orders.map((order) => {
+        {g.list.map((order) => {
           const currentIdx = getStatusIndex(order.status);
           const isThisNew = isNew && order.orderId === idParam;
           const whatsappMsg = encodeURIComponent(t("track.whatsappOrderMsg", { id: order.orderId }));
+          // Shop-pickup orders reuse the same DB statuses, shown as Ready for Pickup / Collected
+          const isPickup = order.deliveryType === "pickup";
+          const statusText = (s: string) => t(isPickup ? `track.pickupStatus.${s}` : `track.status.${s}`);
+          const isReady = isPickup && order.status === "dispatched";
 
           return (
             <div key={order.orderId} className={`rounded-xl border p-6 ${isThisNew ? "border-green-300 dark:border-green-800" : "border-border"}`}>
@@ -149,7 +189,7 @@ function TrackOrderContent() {
                   <p className="text-lg font-bold text-primary">{order.orderId}</p>
                 </div>
                 <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                  {t(`track.status.${order.status}`)}
+                  {statusText(order.status)}
                 </span>
               </div>
 
@@ -182,7 +222,7 @@ function TrackOrderContent() {
               {isThisNew && (
                 <div className="mb-4 flex flex-wrap gap-2">
                   <a
-                    href={`https://wa.me/${SHOP_WHATSAPP}?text=${whatsappMsg}`}
+                    href={`https://wa.me/${shop.whatsapp}?text=${whatsappMsg}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="rounded-lg bg-[#25D366] px-4 py-2 text-xs font-medium text-white hover:bg-[#25D366]/90"
@@ -196,6 +236,26 @@ function TrackOrderContent() {
                     <Home className="size-3.5" />
                     {t("track.backHome")}
                   </Link>
+                </div>
+              )}
+
+              {isPickup && order.status !== "delivered" && (
+                <div className={`mb-5 rounded-xl border p-4 ${isReady ? "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30" : "border-border bg-muted/40"}`}>
+                  <div className="flex items-start gap-3">
+                    <Store className={`mt-0.5 size-5 flex-shrink-0 ${isReady ? "text-green-600" : "text-primary"}`} />
+                    <div className="flex-1 space-y-1.5">
+                      <p className={`text-sm font-semibold ${isReady ? "text-green-800 dark:text-green-300" : "text-foreground"}`}>
+                        {t(isReady ? "track.pickupReadyTitle" : "track.pickupWaitTitle")}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {t(isReady ? "track.pickupReadyDesc" : "track.pickupWaitDesc")}
+                      </p>
+                      <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                        <MapPin className="mt-px size-3.5 flex-shrink-0" />
+                        <span>{shop.address}<br />{shop.hours}</span>
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -217,7 +277,7 @@ function TrackOrderContent() {
                       </div>
                       <div className="pb-4">
                         <p className={`text-sm font-medium ${isDone ? "text-foreground" : "text-muted-foreground"}`}>
-                          {t(`track.status.${status}`)}
+                          {statusText(status)}
                         </p>
                         {isCurrent && (
                           <p className="flex items-center gap-1 text-xs text-primary">
@@ -233,6 +293,9 @@ function TrackOrderContent() {
             </div>
           );
         })}
+      </div>
+      </section>
+      ))}
       </div>
     </div>
     </>

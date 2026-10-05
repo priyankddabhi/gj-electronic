@@ -30,7 +30,9 @@ export async function GET(req: NextRequest) {
       ? { price: 1 }
       : sort === "price_desc"
         ? { price: -1 }
-        : { createdAt: -1 };
+        : sort === "popular"
+          ? { ratingAvg: -1, ratingCount: -1, createdAt: -1 }
+          : { createdAt: -1 };
 
   const total = await Product.countDocuments(filter);
   const products = await Product.find(filter)

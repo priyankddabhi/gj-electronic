@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MessageCircle, Users } from "lucide-react";
+import { MessageCircle, Users, Trash2 } from "lucide-react";
 
 interface Customer {
   name: string;
   phone: string;
   registered: boolean;
+  accountId?: string;
   orders: number;
   repairs: number;
   paid: number;
@@ -14,11 +15,37 @@ interface Customer {
 
 type OrderRow = { customerName: string; phone: string; total: number; paymentStatus: string };
 type RepairRow = { customerName: string; phone: string; estimatedCost: number | null; paymentStatus: string };
-type AccountRow = { name: string; phone: string };
+type AccountRow = { _id: string; name: string; phone: string };
 
 export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Deletes everything for this number: login account, orders, repairs and reviews
+  const deleteCustomer = async (c: Customer) => {
+    const parts = [
+      c.registered ? "login account" : null,
+      c.orders ? `${c.orders} order(s)` : null,
+      c.repairs ? `${c.repairs} repair(s)` : null,
+    ].filter(Boolean).join(", ");
+    if (!confirm(`Delete ${c.name} (${c.phone})?\n\nThis removes: ${parts}${c.registered ? " and their reviews" : ""}.`)) return;
+    if (!confirm("This is permanent and cannot be undone. Orders and repairs will also leave Payments and revenue. Continue?")) return;
+    try {
+      const res = await fetch("/api/customers/purge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: c.phone }),
+      });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        alert(`Could not delete: ${err.error || res.statusText}`);
+        return;
+      }
+      setCustomers((prev) => prev.filter((x) => x.phone !== c.phone));
+    } catch (e) {
+      alert(`Delete failed: ${e}`);
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -39,6 +66,7 @@ export default function AdminCustomersPage() {
         const c = get(a.phone, a.name);
         c.name = a.name;
         c.registered = true;
+        c.accountId = a._id;
       });
       (orderData.orders || []).forEach((o: OrderRow) => {
         const c = get(o.phone, o.customerName);
@@ -101,6 +129,7 @@ export default function AdminCustomersPage() {
                   <td className="px-4 py-3 text-center tabular-nums">{c.repairs}</td>
                   <td className="px-4 py-3 text-right font-medium tabular-nums">₹{c.paid.toLocaleString("en-IN")}</td>
                   <td className="px-4 py-3 text-center">
+                    <div className="inline-flex items-center gap-2">
                     <a
                       href={`https://wa.me/91${c.phone.replace(/\D/g, "").slice(-10)}?text=${encodeURIComponent(
                         `Hi ${c.name}, this is GJ Electronic.`
@@ -112,6 +141,15 @@ export default function AdminCustomersPage() {
                       <MessageCircle className="size-3" />
                       WhatsApp
                     </a>
+                    <button
+                      type="button"
+                      onClick={() => deleteCustomer(c)}
+                      title="Delete this customer and all their orders, repairs and reviews"
+                      className="inline-flex items-center gap-1 rounded-lg border border-destructive/40 px-2.5 py-1 text-xs font-medium text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="size-3" /> Delete
+                    </button>
+                    </div>
                   </td>
                 </tr>
               ))}

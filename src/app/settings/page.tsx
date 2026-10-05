@@ -6,7 +6,8 @@ import { useTranslation } from "react-i18next";
 import { Check, Languages, User, KeyRound, History, LifeBuoy, LogOut, Phone, MessageCircle, Package, Wrench } from "lucide-react";
 import { useCustomerStore, type CustomerInfo } from "@/store/customer";
 import { MY_ORDERS_KEY, MY_REPAIRS_KEY, getSavedIds } from "@/lib/myTracking";
-import { SHOP_PHONE, SHOP_WHATSAPP } from "@/lib/constants";
+import { SHOP_PHONE } from "@/lib/constants";
+import { useShopInfo } from "@/lib/shopInfo";
 import { MIN_PASSWORD, normalizePhone } from "@/lib/phone";
 import PageHero from "@/components/PageHero";
 
@@ -257,6 +258,7 @@ function AuthForm() {
 }
 
 export default function SettingsPage() {
+  const shop = useShopInfo();
   const { t, i18n } = useTranslation();
   const { customer, loading, logout } = useCustomerStore();
   const [trackedCount, setTrackedCount] = useState(
@@ -368,7 +370,7 @@ export default function SettingsPage() {
             {t("home.call")} {SHOP_PHONE}
           </a>
           <a
-            href={`https://wa.me/${SHOP_WHATSAPP}`}
+            href={`https://wa.me/${shop.whatsapp}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
